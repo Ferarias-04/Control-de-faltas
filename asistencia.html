@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Control de Faltas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F1ECF6;
+    --bg-raised: #FAF7FC;
+    --ink: #2C2138;
+    --ink-soft: #7B6E8B;
+    --line: #D4C7E2;
+    --line-soft: #E6DCEF;
+    --ok: #4C7A5A;
+    --ok-bg: #E2EBE0;
+    --warn: #A9752E;
+    --warn-bg: #F1E4CF;
+    --danger: #93375C;
+    --danger-bg: #F1DCE7;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: inherit; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1E1726;
+      --bg-raised: #271F30;
+      --ink: #EDE6F2;
+      --ink-soft: #A99BB8;
+      --line: #40324F;
+      --line-soft: #2F2639;
+      --ok: #8DBF9B;
+      --ok-bg: #29392E;
+      --warn: #E1B36C;
+      --warn-bg: #3B301F;
+      --danger: #E38FAB;
+      --danger-bg: #3B2331;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1E1726;
+    --bg-raised: #271F30;
+    --ink: #EDE6F2;
+    --ink-soft: #A99BB8;
+    --line: #40324F;
+    --line-soft: #2F2639;
+    --ok: #8DBF9B;
+    --ok-bg: #29392E;
+    --warn: #E1B36C;
+    --warn-bg: #3B301F;
+    --danger: #E38FAB;
+    --danger-bg: #3B2331;
+  }
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100%;
+  }
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 20px 100px;
+  }
+  header.page {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: clamp(28px, 5vw, 38px);
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .sub {
+    color: var(--ink-soft);
+    font-size: 14px;
+    margin: 0 0 20px;
+    line-height: 1.5;
+    max-width: 46ch;
+  }
+  .backup-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 32px;
+  }
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .btn {
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--bg);
+    border-radius: 3px;
+    padding: 9px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: opacity .15s ease;
+  }
+  .btn:hover { opacity: .82; }
+  .btn.ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  .btn.ghost:hover { background: var(--bg-raised); opacity: 1; }
+  .btn.small {
+    padding: 6px 11px;
+    font-size: 13px;
+  }
+  .btn.danger-ghost {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--danger);
+  }
+  .btn.danger-ghost:hover { background: var(--danger-bg); }
+
+  .empty {
+    border: 1px dashed var(--line);
+    border-radius: 6px;
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--ink-soft);
+  }
+  .empty p { margin: 0 0 16px; line-height: 1.6; }
+
+  .ledger {
+    border-top: 1px solid var(--ink);
+  }
+  .subject {
+    border-bottom: 1px solid var(--line);
+    padding: 22px 0;
+  }
+  .subject-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .subject-name {
+    font-family: 'Fraunces', serif;
+    font-size: 21px;
+    font-weight: 500;
+    margin: 0;
+  }
+  .subject-meta {
+    color: var(--ink-soft);
+    font-size: 13px;
+    margin: 3px 0 0;
+  }
+  .subject-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--ink-soft);
+    font-size: 13px;
+    padding: 4px 6px;
+    border-radius: 3px;
+  }
+  .icon-btn:hover { color: var(--danger); background: var(--danger-bg); }
+
+  .meter-row {
+    margin-top: 16px;
+  }
+  .meter {
+    position: relative;
+    height: 10px;
+    background: var(--line-soft);
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .meter-fill {
+    height: 100%;
+    border-radius: 5px 0 0 5px;
+    transition: width .35s ease, background-color .35s ease;
+  }
+  .meter-limit {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    width: 2px;
+    background: var(--ink);
+    opacity: .55;
+  }
+  .meter-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 13px;
+  }
+  .meter-labels .status {
+    font-weight: 600;
+  }
+  .meter-labels .figures {
+    color: var(--ink-soft);
+  }
+  .status.ok { color: var(--ok); }
+  .status.warn { color: var(--warn); }
+  .status.danger { color: var(--danger); }
+
+  .subject-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .toggle-faltas {
+    background: none;
+    border: none;
+    color: var(--ink-soft);
+    font-size: 13px;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: var(--line);
+  }
+  .toggle-faltas:hover { color: var(--ink); }
+
+  .faltas-list {
+    margin-top: 14px;
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .faltas-list.open { display: flex; }
+  .falta-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-raised);
+    border: 1px solid var(--line-soft);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 13.5px;
+  }
+  .falta-item .falta-info {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+  }
+  .falta-item .falta-date { font-weight: 500; }
+  .falta-item .falta-hours { color: var(--ink-soft); }
+  .falta-item .falta-note { color: var(--ink-soft); font-style: italic; }
+  .falta-item button {
+    background: none;
+    border: none;
+    color: var(--ink-soft);
+    font-size: 12px;
+    padding: 2px 4px;
+  }
+  .falta-item button:hover { color: var(--danger); }
+  .no-faltas {
+    color: var(--ink-soft);
+    font-size: 13px;
+    font-style: italic;
+    padding: 4px 0;
+  }
+
+  /* Modal */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 24, 18, 0.45);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 60px 16px;
+    overflow-y: auto;
+    z-index: 10;
+    padding-top: calc(60px + env(safe-area-inset-top, 0px));
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    width: 100%;
+    max-width: 420px;
+    padding: 26px;
+  }
+  .modal h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 20px;
+    margin: 0 0 4px;
+  }
+  .modal .modal-sub {
+    color: var(--ink-soft);
+    font-size: 13px;
+    margin: 0 0 20px;
+  }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .field input {
+    width: 100%;
+    padding: 10px 11px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 15px;
+  }
+  .field input:focus {
+    outline: 2px solid var(--ink);
+    outline-offset: 1px;
+  }
+  .field-row { display: flex; gap: 12px; }
+  .field-row .field { flex: 1; }
+  .field-hint {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 5px;
+  }
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 22px;
+  }
+  .form-error {
+    color: var(--danger);
+    font-size: 13px;
+    margin: -8px 0 14px;
+    display: none;
+  }
+  .form-error.show { display: block; }
+
+  footer.hint {
+    margin-top: 36px;
+    color: var(--ink-soft);
+    font-size: 12.5px;
+    line-height: 1.6;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 16px;
+  }
+
+  @media (max-width: 480px) {
+    .subject-head { flex-direction: column; }
+    .subject-actions { align-self: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="page">
+    <h1>Control de faltas</h1>
+    <button class="btn" id="btnAddSubject">+ Asignatura</button>
+  </header>
+  <p class="sub">Registra tus asignaturas y tus faltas. Cada una avisa cuando te acercas al 20% de las horas totales, el límite habitual para no perder la evaluación continua.</p>
+
+  <div class="backup-row">
+    <button class="btn ghost small" id="btnExport">Exportar copia de seguridad</button>
+    <button class="btn ghost small" id="btnImport">Importar copia de seguridad</button>
+    <input type="file" id="inpImportFile" accept="application/json" style="display:none;">
+  </div>
+
+  <div id="emptyState" class="empty" style="display:none;">
+    <p>Todavía no has añadido ninguna asignatura.<br>Empieza con las horas totales de la asignatura y su límite se calculará solo.</p>
+    <button class="btn" id="btnAddSubjectEmpty">+ Añadir asignatura</button>
+  </div>
+
+  <div class="ledger" id="ledger" style="display:none;"></div>
+
+  <footer class="hint">Los datos se guardan solo en este navegador. Si cambias de dispositivo o borras los datos del navegador, no se conservarán.</footer>
+</div>
+
+<!-- Modal: add subject -->
+<div class="overlay" id="overlaySubject">
+  <div class="modal">
+    <h2>Nueva asignatura</h2>
+    <p class="modal-sub">Indica las horas totales lectivas del curso para calcular tu margen del 20%.</p>
+    <div class="field">
+      <label for="inpName">Nombre de la asignatura</label>
+      <input type="text" id="inpName" placeholder="Ej. Programación de servicios y procesos">
+    </div>
+    <div class="field">
+      <label for="inpTotal">Horas totales</label>
+      <input type="number" id="inpTotal" min="1" step="0.5" placeholder="Ej. 66">
+    </div>
+    <p class="form-error" id="subjectError">Revisa el nombre y las horas: deben ser mayores que cero.</p>
+    <div class="modal-actions">
+      <button class="btn ghost" id="btnCancelSubject">Cancelar</button>
+      <button class="btn" id="btnSaveSubject">Guardar asignatura</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: add falta -->
+<div class="overlay" id="overlayFalta">
+  <div class="modal">
+    <h2>Registrar falta</h2>
+    <p class="modal-sub" id="faltaSubjectLabel"></p>
+    <div class="field-row">
+      <div class="field">
+        <label for="inpFaltaDate">Fecha</label>
+        <input type="date" id="inpFaltaDate">
+      </div>
+      <div class="field">
+        <label for="inpFaltaHours">Horas de ese día</label>
+        <input type="number" id="inpFaltaHours" min="0.5" step="0.5" placeholder="Ej. 2">
+      </div>
+    </div>
+    <div class="field">
+      <label for="inpFaltaNote">Motivo (opcional)</label>
+      <input type="text" id="inpFaltaNote" placeholder="Ej. Cita médica">
+    </div>
+    <p class="form-error" id="faltaError">Indica una fecha y unas horas válidas.</p>
+    <div class="modal-actions">
+      <button class="btn ghost" id="btnCancelFalta">Cancelar</button>
+      <button class="btn" id="btnSaveFalta">Guardar falta</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var STORAGE_KEY = 'asistencia_asignaturas_v1';
+  var LIMIT_RATIO = 0.20;
+  var state = [];
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) state = JSON.parse(raw) || [];
+    } catch (e) {
+      state = [];
+    }
+  }
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) { /* storage unavailable, continue in-memory */ }
+  }
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+  function fmtHours(n) {
+    var r = Math.round(n * 10) / 10;
+    return (r % 1 === 0 ? r.toFixed(0) : r.toFixed(1)).replace('.', ',') + 'h';
+  }
+  function fmtDate(iso) {
+    var parts = iso.split('-');
+    if (parts.length !== 3) return iso;
+    return parts[2] + '/' + parts[1] + '/' + parts[0];
+  }
+  function sumHours(subject) {
+    return subject.faltas.reduce(function (acc, f) { return acc + f.hours; }, 0);
+  }
+
+  function render() {
+    var ledger = document.getElementById('ledger');
+    var empty = document.getElementById('emptyState');
+    if (state.length === 0) {
+      ledger.style.display = 'none';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    ledger.style.display = 'block';
+    ledger.innerHTML = '';
+
+    state.forEach(function (subject) {
+      var used = sumHours(subject);
+      var limit = subject.total * LIMIT_RATIO;
+      var remaining = limit - used;
+      var pctOfTotal = Math.min(100, (used / subject.total) * 100);
+      var pctOfLimit = subject.total > 0 ? used / limit : 0;
+      var limitPctOfTotal = LIMIT_RATIO * 100;
+
+      var statusClass, statusText, fillColor;
+      if (pctOfLimit >= 1) {
+        statusClass = 'danger'; fillColor = 'var(--danger)';
+        statusText = remaining < 0
+          ? 'Límite superado por ' + fmtHours(Math.abs(remaining))
+          : 'Límite alcanzado';
+      } else if (pctOfLimit >= 0.7) {
+        statusClass = 'warn'; fillColor = 'var(--warn)';
+        statusText = 'Quedan ' + fmtHours(remaining) + ' de margen';
+      } else {
+        statusClass = 'ok'; fillColor = 'var(--ok)';
+        statusText = 'Quedan ' + fmtHours(remaining) + ' de margen';
+      }
+
+      var el = document.createElement('div');
+      el.className = 'subject';
+      el.innerHTML =
+        '<div class="subject-head">' +
+          '<div>' +
+            '<p class="subject-name"></p>' +
+            '<p class="subject-meta"></p>' +
+          '</div>' +
+          '<div class="subject-actions">' +
+            '<button class="btn small" data-action="add-falta">+ Falta</button>' +
+            '<button class="icon-btn" data-action="delete-subject" title="Eliminar asignatura" aria-label="Eliminar asignatura">Eliminar</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="meter-row">' +
+          '<div class="meter">' +
+            '<div class="meter-fill" style="width:' + pctOfTotal + '%; background:' + fillColor + ';"></div>' +
+            '<div class="meter-limit" style="left:' + limitPctOfTotal + '%;"></div>' +
+          '</div>' +
+          '<div class="meter-labels">' +
+            '<span class="status ' + statusClass + '"></span>' +
+            '<span class="figures"></span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="subject-footer">' +
+          '<button class="toggle-faltas" data-action="toggle-faltas">Ver faltas registradas (' + subject.faltas.length + ')</button>' +
+        '</div>' +
+        '<div class="faltas-list" data-faltas-list></div>';
+
+      el.querySelector('.subject-name').textContent = subject.name;
+      el.querySelector('.subject-meta').textContent =
+        subject.total.toString().replace('.', ',') + 'h totales · límite de faltas ' + fmtHours(limit) + ' (20%)';
+      el.querySelector('.status').textContent = statusText;
+      el.querySelector('.figures').textContent = fmtHours(used) + ' usadas de ' + fmtHours(limit);
+
+      var faltasList = el.querySelector('[data-faltas-list]');
+      if (subject.faltas.length === 0) {
+        faltasList.innerHTML = '<p class="no-faltas">Ninguna falta registrada todavía.</p>';
+      } else {
+        var sorted = subject.faltas.slice().sort(function (a, b) { return b.date.localeCompare(a.date); });
+        sorted.forEach(function (f) {
+          var item = document.createElement('div');
+          item.className = 'falta-item';
+          item.innerHTML =
+            '<div class="falta-info">' +
+              '<span class="falta-date"></span>' +
+              '<span class="falta-hours"></span>' +
+              (f.note ? '<span class="falta-note"></span>' : '') +
+            '</div>' +
+            '<button data-action="delete-falta" data-falta-id="' + f.id + '">Quitar</button>';
+          item.querySelector('.falta-date').textContent = fmtDate(f.date);
+          item.querySelector('.falta-hours').textContent = fmtHours(f.hours);
+          if (f.note) item.querySelector('.falta-note').textContent = f.note;
+          faltasList.appendChild(item);
+        });
+      }
+
+      el.querySelector('[data-action="add-falta"]').addEventListener('click', function () {
+        openFaltaModal(subject.id);
+      });
+      el.querySelector('[data-action="delete-subject"]').addEventListener('click', function () {
+        if (confirm('¿Eliminar "' + subject.name + '" y todas sus faltas registradas?')) {
+          state = state.filter(function (s) { return s.id !== subject.id; });
+          saveState();
+          render();
+        }
+      });
+      el.querySelector('[data-action="toggle-faltas"]').addEventListener('click', function (ev) {
+        faltasList.classList.toggle('open');
+        ev.target.textContent = (faltasList.classList.contains('open') ? 'Ocultar faltas registradas (' : 'Ver faltas registradas (') + subject.faltas.length + ')';
+      });
+      faltasList.querySelectorAll('[data-action="delete-falta"]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var fid = btn.getAttribute('data-falta-id');
+          subject.faltas = subject.faltas.filter(function (f) { return f.id !== fid; });
+          saveState();
+          render();
+        });
+      });
+
+      ledger.appendChild(el);
+    });
+  }
+
+  // Subject modal
+  var overlaySubject = document.getElementById('overlaySubject');
+  function openSubjectModal() {
+    document.getElementById('inpName').value = '';
+    document.getElementById('inpTotal').value = '';
+    document.getElementById('inpSession').value = '';
+    document.getElementById('subjectError').classList.remove('show');
+    overlaySubject.classList.add('open');
+    setTimeout(function () { document.getElementById('inpName').focus(); }, 30);
+  }
+  function closeSubjectModal() { overlaySubject.classList.remove('open'); }
+  document.getElementById('btnAddSubject').addEventListener('click', openSubjectModal);
+  document.getElementById('btnAddSubjectEmpty').addEventListener('click', openSubjectModal);
+  document.getElementById('btnCancelSubject').addEventListener('click', closeSubjectModal);
+  overlaySubject.addEventListener('click', function (e) { if (e.target === overlaySubject) closeSubjectModal(); });
+
+  document.getElementById('btnSaveSubject').addEventListener('click', function () {
+    var name = document.getElementById('inpName').value.trim();
+    var total = parseFloat(document.getElementById('inpTotal').value);
+    var err = document.getElementById('subjectError');
+    if (!name || !total || total <= 0) {
+      err.classList.add('show');
+      return;
+    }
+    err.classList.remove('show');
+    state.push({ id: uid(), name: name, total: total, faltas: [] });
+    saveState();
+    closeSubjectModal();
+    render();
+  });
+
+  // Falta modal
+  var overlayFalta = document.getElementById('overlayFalta');
+  var faltaSubjectId = null;
+  function openFaltaModal(subjectId) {
+    faltaSubjectId = subjectId;
+    var subject = state.find(function (s) { return s.id === subjectId; });
+    document.getElementById('faltaSubjectLabel').textContent = subject.name;
+    document.getElementById('inpFaltaDate').value = new Date().toISOString().slice(0, 10);
+    var lastFalta = subject.faltas.slice().sort(function (a, b) { return b.date.localeCompare(a.date); })[0];
+    document.getElementById('inpFaltaHours').value = lastFalta ? lastFalta.hours : '';
+    document.getElementById('inpFaltaNote').value = '';
+    document.getElementById('faltaError').classList.remove('show');
+    overlayFalta.classList.add('open');
+  }
+  function closeFaltaModal() { overlayFalta.classList.remove('open'); faltaSubjectId = null; }
+  document.getElementById('btnCancelFalta').addEventListener('click', closeFaltaModal);
+  overlayFalta.addEventListener('click', function (e) { if (e.target === overlayFalta) closeFaltaModal(); });
+
+  document.getElementById('btnSaveFalta').addEventListener('click', function () {
+    var date = document.getElementById('inpFaltaDate').value;
+    var hours = parseFloat(document.getElementById('inpFaltaHours').value);
+    var note = document.getElementById('inpFaltaNote').value.trim();
+    var err = document.getElementById('faltaError');
+    if (!date || !hours || hours <= 0) {
+      err.classList.add('show');
+      return;
+    }
+    err.classList.remove('show');
+    var subject = state.find(function (s) { return s.id === faltaSubjectId; });
+    subject.faltas.push({ id: uid(), date: date, hours: hours, note: note });
+    saveState();
+    closeFaltaModal();
+    render();
+  });
+
+  loadState();
+  render();
+
+  // Backup: export
+  var downloadsCap = null;
+  (async function initDownloads() {
+    try {
+      if (window.claude && typeof window.claude.use === 'function') {
+        downloadsCap = await window.claude.use('downloads');
+      }
+    } catch (e) {
+      downloadsCap = null;
+    }
+  })();
+
+  document.getElementById('btnExport').addEventListener('click', async function () {
+    if (state.length === 0) {
+      alert('Todavía no hay ninguna asignatura que exportar.');
+      return;
+    }
+    var json = JSON.stringify(state, null, 2);
+    var dateStr = new Date().toISOString().slice(0, 10);
+    var filename = 'control-faltas-' + dateStr + '.json';
+
+    if (downloadsCap) {
+      try {
+        await downloadsCap.save({ filename: filename, data: json });
+        return;
+      } catch (err) {
+        if (err && err.code === 'declined') return;
+        // fall through to the standard browser download below
+      }
+    }
+    try {
+      var blob = new Blob([json], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    } catch (err) {
+      alert('No se ha podido generar la copia de seguridad en este navegador.');
+    }
+  });
+
+  // Backup: import
+  document.getElementById('btnImport').addEventListener('click', function () {
+    document.getElementById('inpImportFile').click();
+  });
+  document.getElementById('inpImportFile').addEventListener('change', function (e) {
+    var file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var imported;
+      try {
+        imported = JSON.parse(reader.result);
+        if (!Array.isArray(imported)) throw new Error('bad shape');
+        imported.forEach(function (s) {
+          if (typeof s.name !== 'string' || typeof s.total !== 'number' || !Array.isArray(s.faltas)) {
+            throw new Error('bad shape');
+          }
+        });
+      } catch (err) {
+        alert('El archivo no tiene un formato válido de copia de seguridad de esta aplicación.');
+        return;
+      }
+      var proceed = state.length === 0 || confirm('Esto sustituirá los datos actuales por los de la copia de seguridad. ¿Continuar?');
+      if (!proceed) return;
+      state = imported;
+      saveState();
+      render();
+      alert('Copia de seguridad importada correctamente.');
+    };
+    reader.onerror = function () {
+      alert('No se ha podido leer el archivo.');
+    };
+    reader.readAsText(file);
+  });
+})();
+</script>
+</body>
+</html>
